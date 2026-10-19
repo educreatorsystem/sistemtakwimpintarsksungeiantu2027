@@ -3,7 +3,7 @@
 const CONFIG = Object.freeze({
   YEAR: 2027,
   SCHOOL_NAME: 'SEKOLAH KEBANGSAAN SUNGEI ANTU',
-  SCHOOL_LOGO_URL: 'https://iili.io/nwStGSf.md.jpg',
+  SCHOOL_LOGO_URL: 'https://iili.io/nwPkxu1.md.png',
   HOLIDAY_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIpAyoWmUpjFXDPpyqnLHTGP6cOa4X0YrT_IWrpxlu2xB6kJbBVe9f0Ozxs2IJXp7wQaS96hdw8NCY/pub?gid=457971484&single=true&output=csv',
   PROGRAM_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIpAyoWmUpjFXDPpyqnLHTGP6cOa4X0YrT_IWrpxlu2xB6kJbBVe9f0Ozxs2IJXp7wQaS96hdw8NCY/pub?gid=679655066&single=true&output=csv',
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxqPcuOFway0lr-ePhJq3oELvgbmTUqe1qJIZQvwtmRmKu2axTNN3fGzcIlhsuq8PFE/exec'
@@ -116,6 +116,15 @@ const el = {};
 let toastTimer = null;
 
 window.addEventListener('DOMContentLoaded', init);
+
+// PWA: daftar Service Worker selepas halaman siap dimuatkan.
+window.addEventListener('load', () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.warn('Service Worker tidak dapat didaftarkan:', err);
+    });
+  }
+});
 
 async function init() {
   cacheElements();
