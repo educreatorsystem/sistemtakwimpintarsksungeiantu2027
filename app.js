@@ -133,7 +133,7 @@ async function init() {
   bindEvents();
   await restoreAdminSession();
   await loadEvents({ preferApi: false });
-  await loadCustomHolidays();
+  await loadCustomHolidays({ preferApi: true });
 }
 
 function cacheElements() {
@@ -321,42 +321,60 @@ async function refreshAllData({ preferApi = false } = {}) {
   await loadCustomHolidays({ preferApi });
 }
 
-async function loadCustomHolidays({ preferApi = false } = {}) {
-  try {
-    let records = [];
-    let loaded = false;
+async function loadCustomHolidays({ preferApi = true } = {}) {
+  let records = [];
+  let loaded = false;
+  let apiError = null;
+  let csvError = null;
 
-    if (preferApi && isApiConfigured()) {
-      try {
-        records = await loadHolidaysFromApi();
-        loaded = true;
-      } catch (apiErr) {
-        console.warn('Fallback cuti melalui CSV:', apiErr);
-      }
-    }
-
-    if (!loaded) {
-      try {
-        records = await loadFromCsv(CONFIG.HOLIDAY_CSV_URL);
-        loaded = true;
-      } catch (csvErr) {
-        console.warn('CSV cuti tidak dapat dibaca:', csvErr);
-      }
-    }
-
-    if (!loaded && isApiConfigured()) {
+  // Utamakan Apps Script kerana cuti tambahan admin disimpan terus dalam tab Cuti2027.
+  if (isApiConfigured()) {
+    try {
       records = await loadHolidaysFromApi();
       loaded = true;
+    } catch (err) {
+      apiError = err;
+      console.warn('Apps Script cuti tidak dapat dibaca. Cuba CSV sebagai fallback:', err);
     }
+  }
 
+  // CSV hanya fallback. Ini penting jika tab belum dipublish atau GitHub/PWA menerima cache lama.
+  if (!loaded && CONFIG.HOLIDAY_CSV_URL) {
+    try {
+      const csvRecords = await loadFromCsv(CONFIG.HOLIDAY_CSV_URL);
+      if (looksLikeHolidayRecords(csvRecords) || csvRecords.length === 0) {
+        records = csvRecords;
+        loaded = true;
+      } else {
+        throw new Error('Struktur CSV cuti tidak sepadan dengan Cuti2027.');
+      }
+    } catch (err) {
+      csvError = err;
+      console.warn('CSV cuti tidak dapat dibaca:', err);
+    }
+  }
+
+  if (loaded) {
     state.customHolidays = normalizeCustomHolidays(records);
     renderCalendar();
-  } catch (err) {
-    console.warn('Cuti tambahan belum dapat dimuatkan:', err);
-    state.customHolidays = [];
-    renderCalendar();
-    if (state.isAdmin) showToast('Data cuti tambahan belum dapat dimuatkan.', 'error');
+    return;
   }
+
+  state.customHolidays = [];
+  renderCalendar();
+  const detail = [apiError && apiError.message, csvError && csvError.message].filter(Boolean).join(' | ');
+  console.warn('Cuti tambahan belum dapat dimuatkan.', detail);
+  if (state.isAdmin) {
+    showToast('Cuti tambahan belum disambungkan. Jalankan setupTakwimSystem2027() dan deploy Apps Script versi baharu.', 'error');
+  }
+}
+
+function looksLikeHolidayRecords(records) {
+  if (!Array.isArray(records) || !records.length) return true;
+  const keys = Object.keys(records[0] || {}).map(k => String(k).trim().toUpperCase());
+  const hasStart = keys.includes('TARIKH_MULA') || keys.includes('START') || keys.includes('MULA');
+  const hasTitle = keys.includes('NAMA_CUTI') || keys.includes('TITLE') || keys.includes('CUTI');
+  return hasStart && hasTitle;
 }
 
 async function loadFromCsv(csvUrl) {

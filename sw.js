@@ -1,9 +1,9 @@
-const CACHE_NAME = 'takwim-pintar-2027-sksa-pwa-v2';
+const CACHE_NAME = 'takwim-pintar-2027-sksa-pwa-v3-cuti-fix';
 const APP_SHELL = [
   './',
   './index.html',
-  './style.css?v=20271020-pwa2',
-  './app.js?v=20271020-pwa2',
+  './style.css?v=20271020-pwa3-cuti-fix',
+  './app.js?v=20271020-pwa3-cuti-fix',
   './manifest.webmanifest'
 ];
 
